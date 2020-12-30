@@ -1,5 +1,5 @@
 import websocket, json, pprint, talib, numpy
-import 
+
 
 SOCKET = "wss://stream.binance.com:9443/ws/ethusdt@kline_1m"
 RSI_PERIOD = 14
