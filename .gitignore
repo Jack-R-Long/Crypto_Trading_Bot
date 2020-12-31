@@ -1,5 +1,5 @@
-# Config py for API keys
-config.py
+# Senstive stuff
+api_creds.py
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
