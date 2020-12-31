@@ -1,3 +1,4 @@
+asyncio
 python-binance
 python-kucoin
 TA-Lib
