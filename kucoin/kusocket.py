@@ -16,11 +16,14 @@ LAST_CLOSE = '0'
 CLOSE_PRICE_LIST = []
 in_position = False # Not bought
 
+client = kuclinet.Client(api_creds.KU_API_PUBLIC, api_creds.KU_API_SECRET, api_creds.KU_PASSPHRASE)
+
 # currencies = client.get_currency(TRADE_SYMBOL)
 # # account = client.get_account(config.ACCOUNT_ID)
 
 # print(currencies)
-async def main():
+async def main(client):
+    client = client
     global loop
     global TRADE_SYMBOL
     global CLOSE_PRICE_LIST
@@ -34,8 +37,8 @@ async def main():
             if is_new and close_price != '0':
                 CLOSE_PRICE_LIST.append(float(close_price))
                 (period_passed, current_rsi) = calculate_RSI(close_price)
-                # if period_passed:
-                #     trade_or_stay(current_rsi)
+                if period_passed:
+                    trade_or_stay(current_rsi)
 
         if msg['topic'] == '/market/ticker:ETH-USDT':
             print(f'got ETH-USDT tick:{msg["data"]}')
@@ -73,8 +76,6 @@ async def main():
                 print(f"L3 order matched: {msg['data']}")
             elif msg['subject'] == 'trade.l3change':
                 print(f"L3 order changed: {msg['data']}")
-
-    client = kuclinet.Client(api_creds.KU_API_PUBLIC, api_creds.KU_API_SECRET, api_creds.KU_PASSPHRASE)
 
     ksm = await KucoinSocketManager.create(loop, client, handle_evt)
 
@@ -145,10 +146,15 @@ def trade_or_stay(current_rsi):
     params: current_rsi = float of current rsi value
     """
     global in_position
+    print('\nHIT TRADE OR STAY\n')
     if current_rsi > RSI_OVERBOUGHT:
         if in_position:
             print("Sell sell sell!")
             # put sell through KuCoin
+            order_succeeded = order('sell', TRADE_QUANITITY, TRADE_SYMBOL)
+            if order_succeeded :
+                in_position = False
+                print('SOLD POSITION')
         else:
             print("It is overbought but we don't own any")
 
@@ -158,10 +164,23 @@ def trade_or_stay(current_rsi):
         else:
             print("Buy buy buy!")
             # Buy order through KuCoin
+            order_succeeded = order('buy', TRADE_QUANITITY, TRADE_SYMBOL)
+            if order_succeeded :
+                in_position = True
+                print('BOUGHT POSITION')
+
+
+def order(side, quantity, symbol=TRADE_SYMBOL):
+    try:
+        print('\nSending order!')
+        # order = client.create_market_order(symbol, side, quantity)
+        # print(order)
+    except Exception as e:
+        print('Failed to place order')
+        return False
+    return True
 
 
 if __name__ == "__main__":
-
     loop = asyncio.get_event_loop()
-    loop.run_until_complete(main())
-    print('Check')
+    loop.run_until_complete(main(client))
