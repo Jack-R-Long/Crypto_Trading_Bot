@@ -1,11 +1,20 @@
 import kucoin.client as kuclinet
 from kucoin.asyncio import KucoinSocketManager
-import asyncio
+import asyncio, numpy, talib
 import api_creds
 
 
 # client = kuclinet.Client(config.KU_API_PUBLIC, config.KU_API_SECRET, config.KU_PASSPHRASE)
 TRADE_SYMBOL = 'ETH'
+RSI_PERIOD = 3
+RSI_OVERBOUGHT = 70
+RSI_OVERSOLD = 30 
+TRADE_QUANITITY = 0.1 
+
+CURRENT_CANDLE_TIME = '0'
+LAST_CLOSE = '0'
+CLOSE_PRICE_LIST = []
+in_position = False # Not bought
 
 # currencies = client.get_currency(TRADE_SYMBOL)
 # # account = client.get_account(config.ACCOUNT_ID)
@@ -14,13 +23,19 @@ TRADE_SYMBOL = 'ETH'
 async def main():
     global loop
     global TRADE_SYMBOL
+    global CLOSE_PRICE_LIST
 
     # callback function that receives messages from the socket
     async def handle_evt(msg):
-        print(msg)
+        print('Recieved message')
         if msg['topic'] == '/market/candles:ETH-USDT_1min':
             print('Got ETH_USDT candle for 1min')
-            calculate_RSI(msg)
+            (is_new, close_price) = check_for_new_candle(msg)
+            if is_new and close_price != '0':
+                CLOSE_PRICE_LIST.append(float(close_price))
+                (period_passed, current_rsi) = calculate_RSI(close_price)
+                # if period_passed:
+                #     trade_or_stay(current_rsi)
 
         if msg['topic'] == '/market/ticker:ETH-USDT':
             print(f'got ETH-USDT tick:{msg["data"]}')
@@ -88,12 +103,61 @@ async def main():
         print("sleeping to keep loop open")
         await asyncio.sleep(20, loop=loop)
 
-def calculate_RSI(msg):
+def check_for_new_candle(msg):
     """
     params: msg = Dictionary of candlestick data 
     """
-    candle_close = msg['data']['candles'][2]
-    print('Candle close price is {}'.format(candle_close))
+    global CURRENT_CANDLE_TIME
+    global LAST_CLOSE
+
+    candle_time = msg['data']['candles'][0]
+    current_close_price = msg['data']['candles'][2]
+    print('Current close is {}'.format(current_close_price))
+    if candle_time != CURRENT_CANDLE_TIME:
+        print("Alert new candle!!!")
+        print("Last candle close was {}".format(LAST_CLOSE))
+        CURRENT_CANDLE_TIME = candle_time
+        return (True, LAST_CLOSE)
+    # Update global close price becuase a new candle has not been recievd
+    LAST_CLOSE = current_close_price
+    return (False, LAST_CLOSE)
+
+def calculate_RSI(close_price):
+    """
+    params: close_price = String of current close price
+    """
+    global RSI_PERIOD
+    global CLOSE_PRICE_LIST
+    
+    print(CLOSE_PRICE_LIST)
+    if len(CLOSE_PRICE_LIST) > RSI_PERIOD:
+        np_closes = numpy.array(CLOSE_PRICE_LIST)
+        rsi = talib.RSI(np_closes, RSI_PERIOD)
+        last_rsi = rsi[-1]
+        print("RSI values so far \n{}".format(rsi))
+        print("Current RSI is: {}".format(last_rsi))
+        return (True, last_rsi)
+    return (False, 0.0)
+
+
+def trade_or_stay(current_rsi):
+    """
+    params: current_rsi = float of current rsi value
+    """
+    global in_position
+    if current_rsi > RSI_OVERBOUGHT:
+        if in_position:
+            print("Sell sell sell!")
+            # put sell through KuCoin
+        else:
+            print("It is overbought but we don't own any")
+
+    if current_rsi < RSI_OVERSOLD:
+        if in_position:
+            print("Oversold but we are already in position")
+        else:
+            print("Buy buy buy!")
+            # Buy order through KuCoin
 
 
 if __name__ == "__main__":
