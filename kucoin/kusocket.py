@@ -6,15 +6,16 @@ import api_creds
 
 # client = kuclinet.Client(config.KU_API_PUBLIC, config.KU_API_SECRET, config.KU_PASSPHRASE)
 TRADE_SYMBOL = 'ETH'
-RSI_PERIOD = 3
+RSI_PERIOD = 14
 RSI_OVERBOUGHT = 70
 RSI_OVERSOLD = 30 
-TRADE_QUANITITY = 0.1 
+TRADE_QUANITITY = 0.01
 
 CURRENT_CANDLE_TIME = '0'
 LAST_CLOSE = '0'
 CLOSE_PRICE_LIST = []
 in_position = False # Not bought
+order_ids = []  # List of orders placed
 
 client = kuclinet.Client(api_creds.KU_API_PUBLIC, api_creds.KU_API_SECRET, api_creds.KU_PASSPHRASE)
 
@@ -173,12 +174,17 @@ def trade_or_stay(current_rsi):
 def order(side, quantity, symbol=TRADE_SYMBOL):
     try:
         print('\nSending order!')
-        # order = client.create_market_order(symbol, side, quantity)
-        # print(order)
+        order = client.create_market_order(symbol, side, quantity)
+        print(order)
+        order_ids.append(order)
     except Exception as e:
         print('Failed to place order')
         return False
     return True
+
+def get_accounts():
+    account = client.get_accounts()
+    print(account)
 
 
 if __name__ == "__main__":
