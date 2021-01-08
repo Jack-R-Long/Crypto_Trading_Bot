@@ -5,7 +5,7 @@ import api_creds
 
 
 # client = kuclinet.Client(config.KU_API_PUBLIC, config.KU_API_SECRET, config.KU_PASSPHRASE)
-TRADE_SYMBOL = 'ETH'
+TRADE_SYMBOL = 'ETH-USDT'
 RSI_PERIOD = 14
 RSI_OVERBOUGHT = 70
 RSI_OVERSOLD = 30 

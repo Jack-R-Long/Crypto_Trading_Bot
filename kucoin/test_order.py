@@ -13,7 +13,7 @@ def order(side, quantity, symbol):
         order_ids.append(order)
     except Exception as e:
         print('Failed to place order')
-        print(e)
+        print(e.__cause__)
         return False
     return True
 
